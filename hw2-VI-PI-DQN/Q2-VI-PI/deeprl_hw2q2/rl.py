@@ -1,9 +1,5 @@
 # coding: utf-8
-<<<<<<< Updated upstream
-# hello github this is chenxi brach
-=======
-# hello github
->>>>>>> Stashed changes
+# shit
 from __future__ import division, absolute_import
 from __future__ import print_function, unicode_literals
 
