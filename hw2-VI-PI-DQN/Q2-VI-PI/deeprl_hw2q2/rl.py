@@ -1,5 +1,5 @@
 # coding: utf-8
-# hello github阿是卡德罗夫加拉加斯地方了；k
+
 from __future__ import division, absolute_import
 from __future__ import print_function, unicode_literals
 
