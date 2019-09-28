@@ -4,7 +4,6 @@ from __future__ import (absolute_import, division, print_function,
 from builtins import input
 
 import gym
-import deeprl_hw2q2.lake_envs as lake_env
 import time
 import rl
 
