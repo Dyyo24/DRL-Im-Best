@@ -308,7 +308,22 @@ def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
       The value function and the number of iterations it took to converge.
     """
     value_func = np.zeros(env.nS)  # initialize value function
-    return value_func, 0
+    for num_iter in range(max_iterations):
+        delta = 0
+        value_func_old = value_func.copy()
+        for state in range(env.nS):
+            # Get the max value over all policies/actions
+            values = np.zeros(env.nA)
+            for action in range(env.nA):
+                prob, nextstate, reward, is_terminal = env.P[state][action][0]
+                values[action] = prob * (reward + gamma * value_func_old[nextstate])
+            value_func[state] = np.max(values)
+            delta = max(delta, abs(value_func_old[state] - value_func[state]))
+        # Check convergence
+        if delta<tol:
+            break
+    num_iter += 1 # calculate the total number of value iteration
+    return value_func, num_iter
 
 
 def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3):
