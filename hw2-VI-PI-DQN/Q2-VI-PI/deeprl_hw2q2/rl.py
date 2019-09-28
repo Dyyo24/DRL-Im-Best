@@ -225,8 +225,6 @@ def policy_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
         policy_change, policy = improve_policy(env, gamma, value_func, policy)
         num_impro_iter_total += 1
         num_eval_iter_total += num_iter
-        if num_impro_iter_total>1000:
-            policy_change = False
     return policy, value_func, num_impro_iter_total, num_eval_iter_total
 
 
