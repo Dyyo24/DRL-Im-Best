@@ -325,7 +325,7 @@ def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     num_iter += 1 # calculate the total number of value iteration
     return value_func, num_iter
 
-
+# Result of one test: 6
 def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs value iteration for a given gamma and environment.
     Updates states in their 1-N order.
@@ -348,9 +348,24 @@ def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3)
       The value function and the number of iterations it took to converge.
     """
     value_func = np.zeros(env.nS)  # initialize value function
-    return value_func, 0
+    for num_iter in range(max_iterations):
+        delta = 0
+        for state in range(env.nS):
+            # Get the max value over all policies/actions
+            values = np.zeros(env.nA)
+            for action in range(env.nA):
+                prob, nextstate, reward, is_terminal = env.P[state][action][0]
+                values[action] = prob * (reward + gamma * value_func[nextstate])
+            value_old = value_func[state]
+            value_func[state] = np.max(values)
+            delta = max(delta, abs(value_old - value_func[state]))
+        # Check convergence
+        if delta<tol:
+            break
+    num_iter += 1 # calculate the total number of value iteration
+    return value_func, num_iter
 
-
+# Result of ten test: 7\7\6\8\7\7\9\9\8\7
 def value_iteration_async_randperm(env, gamma, max_iterations=int(1e3),
                                    tol=1e-3):
     """Runs value iteration for a given gamma and environment.
@@ -374,7 +389,24 @@ def value_iteration_async_randperm(env, gamma, max_iterations=int(1e3),
       The value function and the number of iterations it took to converge.
     """
     value_func = np.zeros(env.nS)  # initialize value function
-    return value_func, 0
+    for num_iter in range(max_iterations):
+        delta = 0
+        randperm = np.arange(env.nS)
+        np.random.shuffle(randperm)
+        for state in randperm:
+            # Get the max value over all policies/actions
+            values = np.zeros(env.nA)
+            for action in range(env.nA):
+                prob, nextstate, reward, is_terminal = env.P[state][action][0]
+                values[action] = prob * (reward + gamma * value_func[nextstate])
+            value_old = value_func[state]
+            value_func[state] = np.max(values)
+            delta = max(delta, abs(value_old - value_func[state]))
+        # Check convergence
+        if delta<tol:
+            break
+    num_iter += 1 # calculate the total number of value iteration
+    return value_func, num_iter
 
 
 def value_iteration_async_custom(env, gamma, max_iterations=int(1e3), tol=1e-3):
