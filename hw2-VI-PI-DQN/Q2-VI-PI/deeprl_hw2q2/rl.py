@@ -80,7 +80,7 @@ def evaluate_policy_sync(env, gamma, policy, max_iterations=int(1e3), tol=1e-3):
 
     while (True):
         num_iter+=1
-        value_func_old = value_func
+        value_func_old = value_func.copy()
         for i in range(env.nS):
             v = value_func_old[i]
             prob, nextstate, reward, is_terminal = env.P[i][policy[i]][0]
