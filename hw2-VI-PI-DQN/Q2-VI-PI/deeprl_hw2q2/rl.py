@@ -221,10 +221,12 @@ def policy_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     num_impro_iter_total = 0
     num_eval_iter_total = 0
     while(policy_change):
-        value_func, num_iter = evaluate_policy_async_randperm(env, gamma, policy)
+        value_func, num_iter = evaluate_policy_sync(env, gamma, policy)
         policy_change, policy = improve_policy(env, gamma, value_func, policy)
-        num_impro_iter_total += num_iter
-        num_eval_iter_total += 1
+        num_impro_iter_total += 1
+        num_eval_iter_total += num_iter
+        if num_impro_iter_total>1000:
+            policy_change = False
     return policy, value_func, num_impro_iter_total, num_eval_iter_total
 
 
