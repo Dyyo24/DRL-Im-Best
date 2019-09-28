@@ -123,7 +123,20 @@ def evaluate_policy_async_ordered(env, gamma, policy, max_iterations=int(1e3), t
       the value function converged.
     """
     value_func = np.zeros(env.nS)  # initialize value function
-    return value_func, 0
+
+    for num_iter in range(max_iterations):
+        delta = 0
+        for state in range(env.nS):
+            # Run the Bellman Expectation Backup Operation
+            value_old = value_func[state]
+            prob, nextstate, reward, is_terminal = env.P[state][policy[state]][0]
+            value_func[state] = prob * (reward + gamma * value_func[nextstate])
+            delta = max(delta, abs(value_old - value_func[state]))
+        # Check convergence
+        if delta<tol:
+            break
+    num_iter += 1 # calculate the total number of value iteration
+    return value_func, num_iter
 
 
 def evaluate_policy_async_randperm(env, gamma, policy, max_iterations=int(1e3), tol=1e-3):
@@ -153,7 +166,25 @@ def evaluate_policy_async_randperm(env, gamma, policy, max_iterations=int(1e3), 
       the value function converged.
     """
     value_func = np.zeros(env.nS)  # initialize value function
-    return value_func, 0
+    
+    for num_iter in range(max_iterations):
+        delta = 0
+        # generate random permutation of state
+        randperm = np.arange(env.nS)
+        np.random.shuffle(randperm)
+        for state in randperm:
+            # Run the Bellman Expectation Backup Operation
+            value_old = value_func[state]
+            prob, nextstate, reward, is_terminal = env.P[state][policy[state]][0]
+            value_func[state] = prob * (reward + gamma * value_func[nextstate])
+            delta = max(delta, abs(value_old - value_func[state]))
+        # Check convergence
+        if delta<tol:
+            break
+    num_iter += 1 # calculate the total number of value iteration
+    return value_func, num_iter
+
+
 
 def improve_policy(env, gamma, value_func, policy):
     """Performs policy improvement.
@@ -227,7 +258,7 @@ def policy_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
         num_eval_iter_total += num_iter
     return policy, value_func, num_impro_iter_total, num_eval_iter_total
 
-
+# Result: 14 improvement iteration and 119 evaluation iteration
 def policy_iteration_async_ordered(env, gamma, max_iterations=int(1e3),
                                    tol=1e-3):
     """Runs policy iteration.
@@ -255,9 +286,18 @@ def policy_iteration_async_ordered(env, gamma, max_iterations=int(1e3),
     """
     policy = np.zeros(env.nS, dtype='int')
     value_func = np.zeros(env.nS)
-    return policy, value_func, 0, 0
+    
+    policy_change = True
+    num_impro_iter_total = 0
+    num_eval_iter_total = 0
+    while(policy_change):
+        value_func, num_iter = evaluate_policy_async_ordered(env, gamma, policy)
+        policy_change, policy = improve_policy(env, gamma, value_func, policy)
+        num_impro_iter_total += 1
+        num_eval_iter_total += num_iter
+    return policy, value_func, num_impro_iter_total, num_eval_iter_total
 
-
+# Result: (14,119)/(14,115)/(14,119)/(14,117)/(14,118)/(14,113)/(14,119)/(14,119)/(14,118)/(14,116)
 def policy_iteration_async_randperm(env, gamma, max_iterations=int(1e3),
                                     tol=1e-3):
     """Runs policy iteration.
@@ -285,7 +325,16 @@ def policy_iteration_async_randperm(env, gamma, max_iterations=int(1e3),
     """
     policy = np.zeros(env.nS, dtype='int')
     value_func = np.zeros(env.nS)
-    return policy, value_func, 0, 0
+    
+    policy_change = True
+    num_impro_iter_total = 0
+    num_eval_iter_total = 0
+    while(policy_change):
+        value_func, num_iter = evaluate_policy_async_randperm(env, gamma, policy)
+        policy_change, policy = improve_policy(env, gamma, value_func, policy)
+        num_impro_iter_total += 1
+        num_eval_iter_total += num_iter
+    return policy, value_func, num_impro_iter_total, num_eval_iter_total
 
 def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs value iteration for a given gamma and environment.
@@ -325,7 +374,7 @@ def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     num_iter += 1 # calculate the total number of value iteration
     return value_func, num_iter
 
-# Result of one test: 6
+# Result of one test: 15
 def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """Runs value iteration for a given gamma and environment.
     Updates states in their 1-N order.
@@ -365,7 +414,7 @@ def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3)
     num_iter += 1 # calculate the total number of value iteration
     return value_func, num_iter
 
-# Result of ten test: 7\7\6\8\7\7\9\9\8\7
+# Result of ten test: 8/7/10/10/10/10/8/11/12/10
 def value_iteration_async_randperm(env, gamma, max_iterations=int(1e3),
                                    tol=1e-3):
     """Runs value iteration for a given gamma and environment.
