@@ -2,10 +2,15 @@
 from __future__ import division, absolute_import
 from __future__ import print_function, unicode_literals
 
+import gym
 import numpy as np
-import deeprl_hw2q2.lake_envs as lake_env
+import lake_envs as lake_env
 
-# more shit
+# Ruixin
+
+env = gym.make('Deterministic-4x4-FrozenLake-v0')
+
+
 def print_policy(policy, action_names):
     """Print the policy in human-readable format.
 
