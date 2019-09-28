@@ -75,7 +75,25 @@ def evaluate_policy_sync(env, gamma, policy, max_iterations=int(1e3), tol=1e-3):
       the value function converged.
     """
     value_func = np.zeros(env.nS)  # initialize value function
-    return value_func, 0
+    num_iter = 0
+    delta = 0
+
+    while (True):
+        num_iter+=1
+        value_func_old = value_func
+        for i in range(env.nS):
+            v = value_func_old[i]
+            prob, nextstate, reward, is_terminal = env.P[i][policy[i]][0]
+            v_new = prob * (reward + gamma * value_func_old[nextstate])
+            value_func[i] = v_new
+            if delta < abs(v-v_new):
+                delta = abs(v-v_new)
+        if delta<tol:
+            break
+        if num_iter > max_iterations:
+            break
+
+    return value_func, num_iter
 
 
 def evaluate_policy_async_ordered(env, gamma, policy, max_iterations=int(1e3), tol=1e-3):
