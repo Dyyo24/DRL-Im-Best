@@ -177,7 +177,16 @@ def improve_policy(env, gamma, value_func, policy):
     bool, np.ndarray
       Returns true if policy changed. Also returns the new policy.
     """
-    return False, policy
+    policy_change = False
+    for state in range(env.nS):
+        q = np.zeros(env.nA)
+        for action in range(env.nA):
+            prob, nextstate, reward, is_terminal = env.P[state][action][0]
+            q[action] = prob * (reward + gamma * value_func[nextstate])
+        if policy[state] != np.argmax(q):
+            policy_change = True
+            policy[state] = np.argmax(q)
+    return policy_change, policy
 
 
 def policy_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
