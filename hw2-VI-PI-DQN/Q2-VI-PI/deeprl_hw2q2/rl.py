@@ -217,7 +217,15 @@ def policy_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
     """
     policy = np.zeros(env.nS, dtype='int')
     value_func = np.zeros(env.nS)
-    return policy, value_func, 0, 0
+    policy_change = True
+    num_impro_iter_total = 0
+    num_eval_iter_total = 0
+    while(policy_change):
+        value_func, num_iter = evaluate_policy_async_randperm(env, gamma, policy)
+        policy_change, policy = improve_policy(env, gamma, value_func, policy)
+        num_impro_iter_total += num_iter
+        num_eval_iter_total += 1
+    return policy, value_func, num_impro_iter_total, num_eval_iter_total
 
 
 def policy_iteration_async_ordered(env, gamma, max_iterations=int(1e3),
