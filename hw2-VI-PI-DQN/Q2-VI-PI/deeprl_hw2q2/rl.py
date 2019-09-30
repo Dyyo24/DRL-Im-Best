@@ -4,7 +4,9 @@ from __future__ import division, absolute_import
 from __future__ import print_function, unicode_literals
 
 import numpy as np
-import deeprl_hw2q2.lake_envs as lake_env
+import matplotlib.pyplot as plt
+import seaborn as sns
+# import lake_envs as lake_env
 
 
 def print_policy(policy, action_names):
@@ -357,6 +359,7 @@ def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
       The value function and the number of iterations it took to converge.
     """
     value_func = np.zeros(env.nS)  # initialize value function
+    policy = np.zeros(env.nS, dtype='int')
     for num_iter in range(max_iterations):
         delta = 0
         value_func_old = value_func.copy()
@@ -367,12 +370,13 @@ def value_iteration_sync(env, gamma, max_iterations=int(1e3), tol=1e-3):
                 prob, nextstate, reward, is_terminal = env.P[state][action][0]
                 values[action] = prob * (reward + gamma * value_func_old[nextstate])
             value_func[state] = np.max(values)
+            policy[state] = policy[state] = np.argmax(values)
             delta = max(delta, abs(value_func_old[state] - value_func[state]))
         # Check convergence
         if delta<tol:
             break
     num_iter += 1 # calculate the total number of value iteration
-    return value_func, num_iter
+    return value_func, num_iter, policy
 
 # Result of one test: 15
 def value_iteration_async_ordered(env, gamma, max_iterations=int(1e3), tol=1e-3):
@@ -501,9 +505,12 @@ def display_policy_letters(env, policy):
     env: gym.core.Environment
     policy: np.ndarray, with shape (env.nS)
     """
+    from gym.envs.toy_text.frozen_lake import LEFT, RIGHT, DOWN, UP
     policy_letters = []
+    action_names = {LEFT: 'LEFT', RIGHT: 'RIGHT', DOWN: 'DOWN', UP: 'UP'}
+    
     for l in policy:
-        policy_letters.append(lake_env.action_names[l][0])
+        policy_letters.append(action_names[l][0])
     
     policy_letters = np.array(policy_letters).reshape(env.nrow, env.ncol)
     
