@@ -13,14 +13,14 @@ class QNetwork():
 	# The network should take in state of the world as an input, 
 	# and output Q values of the actions available to the agent as the output. 
 
-    def __init__(self, env):
+    def __init__(self, state_dim, action_dim, learning_rate):
 		# Define your network architecture here. It is also a good idea to define any training operations 
 		# and optimizers here, initialize your variables, or alternately compile your model here.  
         model = Sequential()       # the model that is trained for Q value estimator (Q hat)
-        model.add(Dense(25, activation='tanh', input_shape=(env.observation_space.shape[0] + 1,)))  # input: state and action
+        model.add(Dense(25, activation='tanh', input_shape=(state_dim + action_dim,)))  # input: state and action
         model.add(Dense(80,activation='tanh'))
-        model.add(Dense(env.action_space.n, activation='softmax'))
-        model.compile(loss='categorical_crossentropy', optimizer=tf.compat.v1.train.AdamOptimizer(), metrics=['accuracy'])
+        model.add(Dense(action_dim, activation='softmax'))
+        model.compile(loss='mean_squared_error', optimizer=keras.optimizers.Adam(learning_rate=learning_rate), metrics=['accuracy'])
           
     def save_model_weights(self, suffix):
 		# Helper function to save your model / weights. 
@@ -38,7 +38,11 @@ class QNetwork():
 		# e.g.: self.model.load_state_dict(torch.load(model_file))
 		
         return keras.models.load_model(weight_file) 
-
+    
+    def fit():
+        return 0
+    def predict():
+        return 0
 
 
 class Replay_Memory():
@@ -75,8 +79,6 @@ class Replay_Memory():
         random_list = np.random.permutation(size)
         batch = self.M[random_list[0:31]].copy()
         return batch
-        
-        
 
     def append(self, transition):
 		# Appends transition to the memory. 	
@@ -94,26 +96,24 @@ class DQN_Agent():
 	# (4) Create a function to test the Q Network's performance on the environment.
 	# (5) Create a function for Experience Replay.
 	
-    def __init__(self, environment_name,episode, epsilon, gamma, C, render=False,burn_in = 10000,memory_size=50000):
+    def __init__(self, environment_name, episode, epsilon, gamma, C, learning_rate, render=False,burn_in = 10000,memory_size=50000):
 
 		# Create an instance of the network itself, as well as the memory. 
 		# Here is also a good place to set environmental parameters,
 		# as well as training parameters - number of episodes / iterations, etc. 
         self.env = gym.make(environment_name)
-        self.Qnet = QNetwork(self.env)
-        self.Qnet_target = QNetwork(self.env)
+        self.Qnet = QNetwork(self.env.observation_space.shape[0], self.env.action_space.n, learning_rate)
+        self.Qnet_target = QNetwork(self.env.observation_space.shape[0], self.env.action_space.n, learning_rate)
         
         self.Replay = Replay_Memory(self.env, memory_size, burn_in)
         self.Transition = self.Replay.Transition
-        
-        
         
         self.gamma = gamma           # discount factor
         self.episode = episode       # number of episodes to run 
         self.memory = self.Replay.M  # memory object list of tuple size (n,5)
         self.eps = epsilon
         self.C = C
-    
+        self.learning_rate = learning_rate
     
     def epsilon_greedy_policy(self, q_values):
 		# Creating epsilon greedy probabilities to sample from.             
@@ -215,14 +215,15 @@ def parse_arguments():
 
 
 def main(args):
-    # The args: Cartpole-v0 or MountainCar-v0
-	args = parse_arguments()
-	environment_name = args.env
+    # The args: --env CartPole-v0 or --env MountainCar-v0
+    args = parse_arguments()
+    environment_name = args.env
     episode = 2000 # Mountain 1000-2000, Cartpole: 2000 to see some improvement
     epsilon = 0.05 # Need to be annealed as learning
     gamma = 0.99 # 0.99 for Cartpole, 0.1 for Mountain
     learning_rate = 0.001 # 0.001 for Cartpole, 0.0001 for Moutain
-
+    C = 20 # Arbitrary value
+    
 	# Setting the session to allow growth, so it doesn't allocate all GPU memory. 
     # Can't use GPU support if you are using Mac
 #	gpu_ops = tf.GPUOptions(allow_growth=True)
@@ -233,7 +234,8 @@ def main(args):
 #	keras.backend.tensorflow_backend.set_session(sess)
 
 	# You want to create an instance of the DQN_Agent class here, and then train / test it. 
-    
+    agent = DQN_Agent(environment_name, episode, epsilon, gamma, C, learning_rate)
+    agent.train()
 if __name__ == '__main__':
 	main(sys.argv)
 
