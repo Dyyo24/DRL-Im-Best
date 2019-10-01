@@ -233,7 +233,7 @@ def main(args):
 #	keras.backend.tensorflow_backend.set_session(sess)
 
 	# You want to create an instance of the DQN_Agent class here, and then train / test it. 
-    DQN_Agent(environment_name=environment_name, episode=, epsilon, gamma, C)
+    
 if __name__ == '__main__':
 	main(sys.argv)
 
