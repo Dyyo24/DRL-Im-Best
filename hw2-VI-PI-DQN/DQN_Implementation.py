@@ -215,20 +215,25 @@ def parse_arguments():
 
 
 def main(args):
-
+    # The args: Cartpole-v0 or MountainCar-v0
 	args = parse_arguments()
 	environment_name = args.env
+    episode = 2000 # Mountain 1000-2000, Cartpole: 2000 to see some improvement
+    epsilon = 0.05 # Need to be annealed as learning
+    gamma = 0.99 # 0.99 for Cartpole, 0.1 for Mountain
+    learning_rate = 0.001 # 0.001 for Cartpole, 0.0001 for Moutain
 
 	# Setting the session to allow growth, so it doesn't allocate all GPU memory. 
-	gpu_ops = tf.GPUOptions(allow_growth=True)
-	config = tf.ConfigProto(gpu_options=gpu_ops)
-	sess = tf.Session(config=config)
+    # Can't use GPU support if you are using Mac
+#	gpu_ops = tf.GPUOptions(allow_growth=True)
+#	config = tf.ConfigProto(gpu_options=gpu_ops)
+#	sess = tf.Session(config=config)
 
 	# Setting this as the default tensorflow session. 
-	keras.backend.tensorflow_backend.set_session(sess)
+#	keras.backend.tensorflow_backend.set_session(sess)
 
 	# You want to create an instance of the DQN_Agent class here, and then train / test it. 
-
+    DQN_Agent(environment_name=environment_name, episode=, epsilon, gamma, C)
 if __name__ == '__main__':
 	main(sys.argv)
 
