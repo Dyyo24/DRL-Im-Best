@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-import keras, tensorflow as tf, numpy as npy, gym, sys, copy, argparse
+import keras, tensorflow as tf, numpy as np, gym, sys, copy, argparse
 from keras.models import Sequential
 from keras.layers import Dense
-import numpy as np
-import gym
+
 
 import collections
 import os
@@ -18,10 +17,10 @@ class QNetwork():
 		# Define your network architecture here. It is also a good idea to define any training operations 
 		# and optimizers here, initialize your variables, or alternately compile your model here.  
         model = Sequential()       # the model that is trained for Q value estimator (Q hat)
-        model.add(Dense(25, activation='tanh', input_shape=(env.observation_space.shape + 1,)))  # input: state and action
-        model.add(Dense(60,activation='tanh'))
-        model.add(Dense(90, activation='softmax'))
-        model.compile(loss='categorical_crossentropy', optimizer=tf.train.AdamOptimizer(), metrics=['accuracy'])
+        model.add(Dense(25, activation='tanh', input_shape=(env.observation_space.shape[0] + 1,)))  # input: state and action
+        model.add(Dense(80,activation='tanh'))
+        model.add(Dense(env.action_space.n, activation='softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer=tf.compat.v1.train.AdamOptimizer(), metrics=['accuracy'])
           
     def save_model_weights(self, suffix):
 		# Helper function to save your model / weights. 
@@ -95,7 +94,7 @@ class DQN_Agent():
 	# (4) Create a function to test the Q Network's performance on the environment.
 	# (5) Create a function for Experience Replay.
 	
-    def __init__(self, environment_name,episode, epsilon, gamma, render=False,burn_in = 10000,memory_size=50000):
+    def __init__(self, environment_name,episode, epsilon, gamma, C, render=False,burn_in = 10000,memory_size=50000):
 
 		# Create an instance of the network itself, as well as the memory. 
 		# Here is also a good place to set environmental parameters,
@@ -113,7 +112,7 @@ class DQN_Agent():
         self.episode = episode       # number of episodes to run 
         self.memory = self.Replay.M  # memory object list of tuple size (n,5)
         self.eps = epsilon
-    
+        self.C = C
     
     
     def epsilon_greedy_policy(self, q_values):
@@ -139,35 +138,46 @@ class DQN_Agent():
         for i in range(self.episode):
             state = self.env.reset()
             done = False
+            c = 0
             while not done:
                 action = self.epsilon_greedy_policy([self.Qnet.predict(state.copy().append(act)) for act in range(self.env.action_space.n)])      # epsilon greedy policy
                 next_state, reward, done, info = self.env.step(action)
                 self.Replay.append(self.Transition(state,action,reward,next_state,done))   # store transition in memory
                 batch = self.Replay.sample_batch(batch_size=32)       # sample minibatch from memory size(32,5)
                 y = []
+                x = []
                 for transition in batch:
-                    r = transition[2]
-                    s = transition[0]
+                    x.append([transition[i] for i in range(3)])
+                    r = transition[2]  # reward
+                    s = transition[0]  # state
                     if transition[4] == True:      # if done
                         y.append(r)    # append reward
                     else:
                         a_opt = self.greedy_policy([self.Qnet_target.predict(s.copy().append(act)) for act in range(self.env.action_space.n)])   #???
                         y.append(r+self.gamma*self.Qnet_target.predict(s.copy().append(a_opt))) 
 
-        
-        
-        
-        
+                history = self.Qnet.fit(batch[32,0:4],y)
+                loss = history.history['loss']
+                val_loss = history.history['val_loss']
+                c+=1 
+                if c % self.C == 0:
+                    self.Qnet_target.set_weights(self.Qnet.get_weights())
+        return loss, val_loss
 
     def test(self, model_file=None):
 		# Evaluate the performance of your agent over 100 episodes, by calculating cummulative rewards for the 100 episodes.
 		# Here you need to interact with the environment, irrespective of whether you are using a memory. 
+        
+        
+        
+        
         pass
      
     def burn_in_memory():
 		# Initialize your replay memory with a burn_in number of episodes / transitions. 
-        Replay = Replay_Memory(self.env,memory_size, burn_in)
-        return Replay
+#        Replay = Replay_Memory(self.env,memory_size, burn_in)
+        pass
+        #return Replay
         
 
 # Note: if you have problems creating video captures on servers without GUI,
