@@ -39,10 +39,10 @@ class QNetwork():
 		
         return keras.models.load_model(weight_file) 
     
-    def fit():
-        return 0
-    def predict():
-        return 0
+#    def fit(self):
+#        return 0
+#    def predict(self):
+#        return 0
 
 
 class Replay_Memory():
