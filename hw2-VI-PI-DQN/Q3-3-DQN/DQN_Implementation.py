@@ -206,11 +206,22 @@ class DQN_Agent():
     def test(self, model_file=None):
 		# Evaluate the performance of your agent over 100 episodes, by calculating cummulative rewards for the 100 episodes.
 		# Here you need to interact with the environment, irrespective of whether you are using a memory. 
-        
-        
-        
-        
-        pass
+        total_reward = 0
+        state_dim = self.env.observation_space.shape[0]
+        done = True
+        for i in range(100):
+            # Check if the game is terminated
+            if done == True:
+                state = self.env.reset()
+
+            # Take action and observe
+            q_value_list = []
+            for act in range(self.env.action_space.n):
+                q_value_list.append( self.Qnet.model.predict( np.concatenate((state.copy(),[act]) ).reshape(1,state_dim+1)).tolist()[0][0] )
+            action = self.greedy_policy(q_value_list)
+            state, reward, done, info = self.env.step(action)
+            total_reward += reward
+        return total_reward
      
     def burn_in_memory():
 		# Initialize your replay memory with a burn_in number of episodes / transitions. 
