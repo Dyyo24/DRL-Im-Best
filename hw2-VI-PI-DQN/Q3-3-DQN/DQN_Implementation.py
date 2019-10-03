@@ -121,7 +121,7 @@ class DQN_Agent():
     
     def epsilon_greedy_policy(self, q_values):
 		# Creating epsilon greedy probabilities to sample from.             
-        if np.random.randn(1) < self.eps:             # input a list of qvalues with all action space 
+        if np.random.uniform(0,1,1) <= self.eps:             # input a list of qvalues with all action space 
             action = self.env.action_space.sample()   # and output the action
         else:
             action = np.argmax(q_values)
