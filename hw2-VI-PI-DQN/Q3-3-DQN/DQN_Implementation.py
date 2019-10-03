@@ -17,10 +17,10 @@ class QNetwork():
 		# Define your network architecture here. It is also a good idea to define any training operations 
 		# and optimizers here, initialize your variables, or alternately compile your model here.  
         self.model = Sequential()       # the model that is trained for Q value estimator (Q hat)
-        self.model.add(Dense(25,kernel_initializer='random_uniform', activation='tanh', input_shape=(state_dim+1,)))  # input: state and action
-        self.model.add(Dense(80,kernel_initializer='random_uniform',activation='tanh'))
-        self.model.add(Dense(1,kernel_initializer='random_uniform', activation='softmax'))
-        self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=learning_rate), metrics=['mape'])
+        self.model.add(Dense(25,kernel_initializer='random_uniform', activation='relu', input_shape=(state_dim+1,)))  # input: state and action
+        self.model.add(Dense(80,kernel_initializer='random_uniform',activation='relu'))
+        self.model.add(Dense(1,kernel_initializer='random_uniform', activation='linear'))
+        self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=learning_rate),metrics=['mse'])
           
     def save_model_weights(self, suffix):
 		# Helper function to save your model / weights. 
@@ -65,7 +65,7 @@ class Replay_Memory():
                 next_state, reward, done, info = env.step(action)
                 
                 self.append(self.Transition(state,action,reward,next_state,done))
-
+            env.reset()
         
     def sample_batch(self, batch_size=32):
 		# This function returns a batch of randomly sampled transitions - i.e. state, action, reward, next state, terminal flag tuples. 
@@ -148,7 +148,7 @@ class DQN_Agent():
             done = False
             c = 0
             
-            if i % 250 == 0:
+            if i % 100 == 0:
                 print('Episode: ', i)
                 tot_reward = self.test()
                 print('Reward: ',tot_reward)
@@ -189,8 +189,8 @@ class DQN_Agent():
                # error = np.power(np.array(y) - np.array(qnet),2) 
                 
                   # train model on gradient descent
-                history = self.Qnet.model.fit(np.array(x),np.array(y),epochs = 10,verbose=0)
-                loss.append( history.history['mape'] )
+                history = self.Qnet.model.fit(np.array(x),np.array(y),epochs = 1,verbose=0)
+                loss.append( history.history['mse'] )
            #     acc.append( history.history['accuracy'] )
                 c+=1 
                 if c % self.C == 0:
@@ -206,24 +206,23 @@ class DQN_Agent():
     def test(self, model_file=None):
 		# Evaluate the performance of your agent over 100 episodes, by calculating cummulative rewards for the 100 episodes.
 		# Here you need to interact with the environment, irrespective of whether you are using a memory. 
-        
         total_reward_list = []
         state_dim = self.env.observation_space.shape[0]
         for i in range(100):
             state = self.env.reset()
             total_reward = 0
             done = False
-            # Check if the game is terminated
-            while done == False:
 
+            # Check if the game is terminated
+
+            while done == False:
                 # Take action and observe
                 q_value_list = []
                 for act in range(self.env.action_space.n):
                     q_value_list.append( self.Qnet.model.predict( np.concatenate((state.copy(),[act]) ).reshape(1,state_dim+1)).tolist()[0][0] )
                 action = self.greedy_policy(q_value_list)
                 state, reward, done, info = self.env.step(action)
-                total_reward = reward + self.gamma * total_reward
-
+                total_reward += reward
             total_reward_list.append(total_reward)
         reward_mean = np.mean(np.array(total_reward_list))
         return reward_mean
