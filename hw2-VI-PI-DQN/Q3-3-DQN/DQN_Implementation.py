@@ -220,7 +220,7 @@ class DQN_Agent():
                     q_value_list.append( self.Qnet.model.predict( np.concatenate((state.copy(),[act]) ).reshape(1,state_dim+1)).tolist()[0][0] )
                 action = self.greedy_policy(q_value_list)
                 state, reward, done, info = self.env.step(action)
-                total_reward = reward + self.gamma * total_reward
+                total_reward += reward
             total_reward_list.append(total_reward)
         reward_mean = np.mean(np.array(total_reward_list))
         return reward_mean
