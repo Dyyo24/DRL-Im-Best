@@ -214,7 +214,7 @@ class DQN_Agent():
 		# Here you need to interact with the environment, irrespective of whether you are using a memory. 
         total_reward_list = []
         state_dim = self.env.observation_space.shape[0]
-        for i in range(100):
+        for i in range(20):
             self.env.reset()
             state = self.env.reset()
             total_reward = 0
