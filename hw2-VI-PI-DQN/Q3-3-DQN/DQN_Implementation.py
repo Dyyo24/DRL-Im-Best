@@ -17,9 +17,9 @@ class QNetwork():
 		# Define your network architecture here. It is also a good idea to define any training operations 
 		# and optimizers here, initialize your variables, or alternately compile your model here.  
         self.model = Sequential()       # the model that is trained for Q value estimator (Q hat)
-        self.model.add(Dense(25, activation='tanh', input_shape=(state_dim+1,)))  # input: state and action
-        self.model.add(Dense(80,activation='tanh'))
-        self.model.add(Dense(1, activation='softmax'))
+        self.model.add(Dense(25,kernel_initializer='random_uniform', activation='tanh', input_shape=(state_dim+1,)))  # input: state and action
+        self.model.add(Dense(80,kernel_initializer='random_uniform',activation='tanh'))
+        self.model.add(Dense(1,kernel_initializer='random_uniform', activation='softmax'))
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=learning_rate), metrics=['mape'])
           
     def save_model_weights(self, suffix):
@@ -72,14 +72,11 @@ class Replay_Memory():
 		# You will feed this to your model to train.
         
         size = len(self.M)      # the size of M        
-    #    print('size M: ',size)
-        random_list = np.random.permutation(size)
-    #    print('section',random_list[0:31])
+        random_list = np.random.permutation(size)    # randomly choose some number
         batch = []
         for i in random_list[0:32]:
             batch.append(self.M[i])
- 
-      #  batch = self.M[random_list[0:31]].copy()
+
         return batch
         
         
@@ -107,16 +104,15 @@ class DQN_Agent():
 		# Here is also a good place to set environmental parameters,
 		# as well as training parameters - number of episodes / iterations, etc. 
         self.env = gym.make(environment_name)
-        print('state',self.env.observation_space.shape[0])
-        print('action',self.env.action_space.n)
+
         self.Qnet = QNetwork(self.env.observation_space.shape[0],self.env.action_space.n, learning_rate)
         self.Qnet_target = QNetwork(self.env.observation_space.shape[0],self.env.action_space.n, learning_rate)
+        self.Qnet_target.model.set_weights(self.Qnet.model.get_weights())
         
+
         self.Replay = Replay_Memory(self.env, memory_size, burn_in)
         self.Transition = self.Replay.Transition
-        
-        
-        
+
         self.gamma = gamma           # discount factor
         self.episode = episode       # number of episodes to run 
         self.memory = self.Replay.M  # memory object list of tuple size (n,5)
@@ -145,52 +141,55 @@ class DQN_Agent():
 		# When use replay memory, you should interact with environment here, and store these 
 		# transitions to memory, while also updating your model.
         loss = []
-    #    acc = []
         count = 0 
         for i in range(self.episode):
             state = self.env.reset()
             size = state.shape[0]
             done = False
             c = 0
-            print('one episode!')
+            
+            if i % 250 == 0:
+                print('Episode: ', i)
+                tot_reward = self.test()
+                print('Reward: ',tot_reward)
+            
+            
             while not done:
                                    
-            #    print('size',size)
-            #    print('test',np.concatenate((state.copy(),[1])).shape)
                 greedy = []
                 for act in range(self.env.action_space.n):
-           #         print('act',act)
                     greedy.append(self.Qnet.model.predict(np.concatenate((state.copy(),[act])).reshape(1,size+1)).tolist()[0][0] )
                     
-           #     print('greedy',greedy)    
                 action = self.epsilon_greedy_policy(greedy)      # epsilon greedy policy
                 next_state, reward, done, info = self.env.step(action)
                 self.Replay.append(self.Transition(state,action,reward,next_state,done))   # store transition in memory
                 batch = self.Replay.sample_batch(batch_size=32)       # sample minibatch from memory size(32,5)
                 y = []
                 x = []
-                qnet = []
+              #  qnet = []
                 for transition in batch:
                     state_x = transition[0].copy()
                     act_x = transition[1]
                     x.append(np.concatenate((state_x,[act_x])))
                     r = transition[2]  # reward
                     s = transition[0]  # state
-                    qnet.append(self.Qnet.model.predict(np.concatenate((s.copy(),[act_x])).reshape(1,size+1)).tolist()[0][0])
+                    # qnet is the lsit of Q(s,a) from minibatch
+                   # qnet.append(self.Qnet.model.predict(np.concatenate((s.copy(),[act_x])).reshape(1,size+1)).tolist()[0][0])
+                   
                     if transition[4] == True:      # if done
-                        y.append(r)    # append reward
+                        y.append(r)    # This terminates. append reward without Q value
                     else:
-                        
-                        greedy = []
+                        greedy = []  # the list containing q values for greedy algorithms
                         for act in range(self.env.action_space.n):
                             greedy.append(self.Qnet_target.model.predict(np.concatenate((s.copy(),[act])).reshape(1,size+1)).tolist()[0][0])
-                        
+                            
                         a_opt = self.greedy_policy([greedy])   
                         y.append(r+self.gamma*self.Qnet_target.model.predict(np.concatenate((s.copy(),[a_opt])).reshape(1,size+1)).tolist()[0][0]) 
                 
-                error = np.array(y) - np.array(qnet) 
+               # error = np.power(np.array(y) - np.array(qnet),2) 
                 
-                history = self.Qnet.model.fit(np.array(x),error,epochs = 10,verbose=0)
+                  # train model on gradient descent
+                history = self.Qnet.model.fit(np.array(x),np.array(y),epochs = 10,verbose=0)
                 loss.append( history.history['mape'] )
            #     acc.append( history.history['accuracy'] )
                 c+=1 
@@ -198,14 +197,16 @@ class DQN_Agent():
                     self.Qnet_target.model.set_weights(self.Qnet.model.get_weights())
                 count +=1 
                 
-                if count < 100000:
+                if count < 100000:  # decaying epsilon over iterations
                     self.eps -= (0.5-0.05)/100000
-                
+            self.env.reset()
+             
         return loss
 
     def test(self, model_file=None):
 		# Evaluate the performance of your agent over 100 episodes, by calculating cummulative rewards for the 100 episodes.
 		# Here you need to interact with the environment, irrespective of whether you are using a memory. 
+        
         total_reward_list = []
         state_dim = self.env.observation_space.shape[0]
         for i in range(100):
@@ -214,16 +215,19 @@ class DQN_Agent():
             done = False
             # Check if the game is terminated
             while done == False:
+
                 # Take action and observe
                 q_value_list = []
                 for act in range(self.env.action_space.n):
                     q_value_list.append( self.Qnet.model.predict( np.concatenate((state.copy(),[act]) ).reshape(1,state_dim+1)).tolist()[0][0] )
                 action = self.greedy_policy(q_value_list)
                 state, reward, done, info = self.env.step(action)
-                total_reward += reward
+                total_reward = reward + self.gamma * total_reward
+
             total_reward_list.append(total_reward)
         reward_mean = np.mean(np.array(total_reward_list))
         return reward_mean
+        
      
     def burn_in_memory():
 		# Initialize your replay memory with a burn_in number of episodes / transitions. 
@@ -281,9 +285,9 @@ def main(args):
 
 	# You want to create an instance of the DQN_Agent class here, and then train / test it. 
     
-    env_name = 'MountainCar-v0'
-    a = DQN_Agent(env_name,episode = 1000, epsilon=0.05 , gamma=1, C = 5)
-    a.train()
+    env_name = 'CartPole-v1'
+    a = DQN_Agent(env_name,episode = 3000, epsilon= 0.5, gamma=0.99, C = 10000,learning_rate = 0.001)
+    loss = a.train()
     
     
 if __name__ == '__main__':
