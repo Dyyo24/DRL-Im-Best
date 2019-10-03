@@ -17,8 +17,8 @@ class QNetwork():
 		# Define your network architecture here. It is also a good idea to define any training operations 
 		# and optimizers here, initialize your variables, or alternately compile your model here.  
         self.model = Sequential()       # the model that is trained for Q value estimator (Q hat)
-        self.model.add(Dense(25,kernel_initializer='random_uniform', activation='relu', input_shape=(state_dim+1,)))  # input: state and action
-        self.model.add(Dense(80,kernel_initializer='random_uniform',activation='relu'))
+        self.model.add(Dense(40,kernel_initializer='random_uniform', activation='relu', input_shape=(state_dim+1,)))  # input: state and action
+        self.model.add(Dense(40,kernel_initializer='random_uniform',activation='relu'))
         self.model.add(Dense(1,kernel_initializer='random_uniform', activation='linear'))
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=learning_rate),metrics=['mse'])
           
@@ -54,10 +54,10 @@ class Replay_Memory():
         self.memory_size = memory_size
         self.Transition = collections.namedtuple("Transition", ["state", "action", "reward", "next_state", "done"])
         self.M = collections.deque(maxlen=memory_size)  # list-like container with fast appends and pops on either end
-        state = env.reset()                   # observation of initial state
-        next_state = state.copy()             # initialize next state
         
         while len(self.M) < burn_in:         # while the size of memory does not exceed burnin size
+            state = env.reset()                   # observation of initial state
+            next_state = state.copy()             # initialize next state
             done = False
             while not done:
                 action = env.action_space.sample() 
@@ -65,7 +65,6 @@ class Replay_Memory():
                 next_state, reward, done, info = env.step(action)
                 
                 self.append(self.Transition(state,action,reward,next_state,done))
-            env.reset()
         
     def sample_batch(self, batch_size=32):
 		# This function returns a batch of randomly sampled transitions - i.e. state, action, reward, next state, terminal flag tuples. 
@@ -275,12 +274,12 @@ def main(args):
     environment_name = args.env
 
 	# Setting the session to allow growth, so it doesn't allocate all GPU memory. 
-    gpu_ops = tf.GPUOptions(allow_growth=True)
-    config = tf.ConfigProto(gpu_options=gpu_ops)
-    sess = tf.Session(config=config)
+#    gpu_ops = tf.GPUOptions(allow_growth=True)
+#    config = tf.ConfigProto(gpu_options=gpu_ops)
+#    sess = tf.Session(config=config)
 
 	# Setting this as the default tensorflow session. 
-    keras.backend.tensorflow_backend.set_session(sess)
+#    keras.backend.tensorflow_backend.set_session(sess)
 
 	# You want to create an instance of the DQN_Agent class here, and then train / test it. 
     
