@@ -17,8 +17,8 @@ class QNetwork():
 		# Define your network architecture here. It is also a good idea to define any training operations 
 		# and optimizers here, initialize your variables, or alternately compile your model here.  
         self.model = Sequential()       # the model that is trained for Q value estimator (Q hat)
-        self.model.add(Dense(40,kernel_initializer='random_uniform', activation='relu', input_shape=(state_dim+1,)))  # input: state and action
-        self.model.add(Dense(40,kernel_initializer='random_uniform',activation='relu'))
+        self.model.add(Dense(30,kernel_initializer='random_uniform', activation='relu', input_shape=(state_dim+1,)))  # input: state and action
+        self.model.add(Dense(50,kernel_initializer='random_uniform',activation='relu'))
         self.model.add(Dense(1,kernel_initializer='random_uniform', activation='linear'))
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=learning_rate),metrics=['mse'])
           
@@ -54,17 +54,19 @@ class Replay_Memory():
         self.memory_size = memory_size
         self.Transition = collections.namedtuple("Transition", ["state", "action", "reward", "next_state", "done"])
         self.M = collections.deque(maxlen=memory_size)  # list-like container with fast appends and pops on either end
+        state = env.reset()                   # observation of initial state
+        next_state = state.copy()             # initialize next state
         
         while len(self.M) < burn_in:         # while the size of memory does not exceed burnin size
-            state = env.reset()                   # observation of initial state
-            next_state = state.copy()             # initialize next state
             done = False
             while not done:
                 action = env.action_space.sample() 
                 state = next_state.copy()
                 next_state, reward, done, info = env.step(action)
                 
-                self.append(self.Transition(state,action,reward,next_state,done))
+                self.M.append(self.Transition(state,action,reward,next_state,done))
+            env.reset()
+            state = env.reset()
         
     def sample_batch(self, batch_size=32):
 		# This function returns a batch of randomly sampled transitions - i.e. state, action, reward, next state, terminal flag tuples. 
@@ -142,41 +144,45 @@ class DQN_Agent():
         loss = []
         count = 0 
         for i in range(self.episode):
+            
+            if i % 50 == 0:
+                print('Episode: ', i)
+                tot_reward = self.test()
+                print('Reward: ',tot_reward)
+                print('Epsilon: ',self.eps)
+            
+            self.env.reset()
             state = self.env.reset()
+            next_state = state.copy()
             size = state.shape[0]
             done = False
             c = 0
             
-            if i % 100 == 0:
-                print('Episode: ', i)
-                tot_reward = self.test()
-                print('Reward: ',tot_reward)
-            
-            
-            while not done:
-                                   
+            while not done:      
                 greedy = []
                 for act in range(self.env.action_space.n):
                     greedy.append(self.Qnet.model.predict(np.concatenate((state.copy(),[act])).reshape(1,size+1)).tolist()[0][0] )
-                    
+                
+                state = next_state.copy()
                 action = self.epsilon_greedy_policy(greedy)      # epsilon greedy policy
-                next_state, reward, done, info = self.env.step(action)
+                next_state, reward, done, info = self.env.step(action)  # obtain state action reward pairs
+                
                 self.Replay.append(self.Transition(state,action,reward,next_state,done))   # store transition in memory
                 batch = self.Replay.sample_batch(batch_size=32)       # sample minibatch from memory size(32,5)
                 y = []
                 x = []
               #  qnet = []
                 for transition in batch:
-                    state_x = transition[0].copy()
                     act_x = transition[1]
-                    x.append(np.concatenate((state_x,[act_x])))
                     r = transition[2]  # reward
-                    s = transition[0]  # state
+                    s = transition[0].copy()  # state
+                    x.append(np.concatenate((s,[act_x])))
                     # qnet is the lsit of Q(s,a) from minibatch
                    # qnet.append(self.Qnet.model.predict(np.concatenate((s.copy(),[act_x])).reshape(1,size+1)).tolist()[0][0])
                    
                     if transition[4] == True:      # if done
                         y.append(r)    # This terminates. append reward without Q value
+                       # print('append done')
                     else:
                         greedy = []  # the list containing q values for greedy algorithms
                         for act in range(self.env.action_space.n):
@@ -188,7 +194,7 @@ class DQN_Agent():
                # error = np.power(np.array(y) - np.array(qnet),2) 
                 
                   # train model on gradient descent
-                history = self.Qnet.model.fit(np.array(x),np.array(y),epochs = 1,verbose=0)
+                history = self.Qnet.model.fit(np.array(x),np.array(y),batch_size=len(batch),epochs = 1,verbose=0)
                 loss.append( history.history['mse'] )
            #     acc.append( history.history['accuracy'] )
                 c+=1 
@@ -198,8 +204,9 @@ class DQN_Agent():
                 
                 if count < 100000:  # decaying epsilon over iterations
                     self.eps -= (0.5-0.05)/100000
-            self.env.reset()
-             
+                 #    self.eps *= 0.9997  # start from eps = 1, then end at 0.05 after 10000 iterations
+
+            
         return loss
 
     def test(self, model_file=None):
@@ -208,6 +215,7 @@ class DQN_Agent():
         total_reward_list = []
         state_dim = self.env.observation_space.shape[0]
         for i in range(100):
+            self.env.reset()
             state = self.env.reset()
             total_reward = 0
             done = False
@@ -224,6 +232,7 @@ class DQN_Agent():
                 total_reward += reward
             total_reward_list.append(total_reward)
         reward_mean = np.mean(np.array(total_reward_list))
+        
         return reward_mean
         
      
@@ -274,17 +283,17 @@ def main(args):
     environment_name = args.env
 
 	# Setting the session to allow growth, so it doesn't allocate all GPU memory. 
-#    gpu_ops = tf.GPUOptions(allow_growth=True)
-#    config = tf.ConfigProto(gpu_options=gpu_ops)
-#    sess = tf.Session(config=config)
+    gpu_ops = tf.GPUOptions(allow_growth=True)
+    config = tf.ConfigProto(gpu_options=gpu_ops)
+    sess = tf.Session(config=config)
 
 	# Setting this as the default tensorflow session. 
-#    keras.backend.tensorflow_backend.set_session(sess)
+    keras.backend.tensorflow_backend.set_session(sess)
 
 	# You want to create an instance of the DQN_Agent class here, and then train / test it. 
     
     env_name = 'CartPole-v1'
-    a = DQN_Agent(env_name,episode = 3000, epsilon= 0.5, gamma=0.99, C = 10000,learning_rate = 0.001)
+    a = DQN_Agent(env_name,episode = 3000, epsilon= 0.5, gamma=0.99, C = 5000,learning_rate = 0.001)
     loss = a.train()
     
     
