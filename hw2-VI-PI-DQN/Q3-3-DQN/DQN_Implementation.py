@@ -196,6 +196,10 @@ class DQN_Agent():
                 c+=1 
                 if c % self.C == 0:
                     self.Qnet_target.model.set_weights(self.Qnet.model.get_weights())
+                count +=1 
+                
+                if count < 100000:
+                    self.eps -= (0.5-0.05)/100000
                 
         return loss
 
