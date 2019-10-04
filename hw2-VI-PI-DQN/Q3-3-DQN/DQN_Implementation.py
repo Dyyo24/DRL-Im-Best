@@ -77,14 +77,12 @@ class Replay_Memory():
 		# randomly initialized agent. Memory size is the maximum size after which old elements in the memory are replaced. 
 		# A simple (if not the most efficient) was to implement the memory is as a list of transitions. 
         self.M = collections.deque(maxlen=memory_size)
-	self.memory_size = memory_size
+        self.memory_size = memory_size
         pass
     
     def append(self, transition):
 		# Append a transition to the memory. 	
         self.M.append(transition)
-	if len(self.M) > self.memory_size:
-            self.M.popleft()
         pass
             
     def sample_batch(self, batch_size=32):
