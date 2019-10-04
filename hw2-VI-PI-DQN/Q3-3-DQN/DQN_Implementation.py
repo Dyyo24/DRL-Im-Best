@@ -20,8 +20,11 @@ class QNetwork():
 		# and optimizers here, initialize your variables, or alternately compile your model here.  
         self.model = Sequential()
         # Input: state and action
-        self.model.add(Dense(25, kernel_initializer='random_uniform', activation='relu', input_shape=(state_dim+1,)))
-        self.model.add(Dense(25, kernel_initializer='random_uniform', activation='relu'))
+        self.model.add(Dense(50, kernel_initializer='random_uniform', activation='tanh', input_shape=(state_dim+1,)))
+# =============================================================================
+#         self.model.add(Dense(50, kernel_initializer='random_uniform', activation='relu'))
+#         self.model.add(Dense(50, kernel_initializer='random_uniform', activation='tanh'))
+# =============================================================================
         # Output: Q-value
         self.model.add(Dense(1, kernel_initializer='random_uniform', activation='linear'))
         self.model.compile(loss='mse', optimizer=keras.optimizers.Adam(learning_rate=learning_rate), metrics=['mse'])
@@ -200,7 +203,7 @@ class DQN_Agent():
                 # Calculate TD error
                 next_state_vec = np.tile(next_state, (self.env.action_space.n,1)) # (action_num, state_dim)
                 next_state_q_vec = self.Qnet.predict(next_state_vec,all_action_vec) # (action_num, state_dim)
-                TD.append( reward+self.gamma*np.max(next_state_q_vec) - np.max(all_q_value_vec) )
+                TD.append( reward+(1-done)*self.gamma*np.max(next_state_q_vec) - np.max(all_q_value_vec) )
 
                 # Training Qnet
                 batch = self.memory.sample_batch()
@@ -229,12 +232,15 @@ class DQN_Agent():
                 loss.append( history.history['mse'] )
                 
                 # Update target Qnet after C steps
-                if iter_num % self.C ==0:
-                    self.Qnet_target.model.set_weights(self.Qnet.model.get_weights())
+# =============================================================================
+#                 if iter_num % self.C ==0:
+#                     self.Qnet_target.model.set_weights(self.Qnet.model.get_weights())
+# =============================================================================
                 # decaying epsilon over iterations
                 if self.eps > 0.05:
                     self.eps -= 10e-7
                 iter_num += 1
+            self.Qnet_target.model.set_weights(self.Qnet.model.get_weights())
             
             TD_error_episode_average =np.mean(TD)
             TD_error_vec.append(TD_error_episode_average)
@@ -342,7 +348,7 @@ def main(args):
 	# You want to create an instance of the DQN_Agent class here, and then train / test it. 
     
     env_name = 'CartPole-v0'
-    a = DQN_Agent(env_name, episode_max = 10000, epsilon= 0.5, gamma=0.99, C = 5000, learning_rate = 0.001, memory_size=50000, burn_in = 10000)
+    a = DQN_Agent(env_name, episode_max = 3000, epsilon= 0.5, gamma=0.99, C = 5000, learning_rate = 0.001, memory_size=50000, burn_in = 10000)
     loss, reward_vec= a.train()
     
 if __name__ == '__main__':
