@@ -342,7 +342,7 @@ def main(args):
 	# You want to create an instance of the DQN_Agent class here, and then train / test it. 
     
     env_name = 'CartPole-v0'
-    a = DQN_Agent(env_name, episode_max = 200, epsilon= 0.5, gamma=0.99, C = 5000, learning_rate = 0.001, memory_size=50000, burn_in = 10000)
+    a = DQN_Agent(env_name, episode_max = 10000, epsilon= 0.5, gamma=0.99, C = 5000, learning_rate = 0.001, memory_size=50000, burn_in = 10000)
     loss, reward_vec= a.train()
     
 if __name__ == '__main__':
