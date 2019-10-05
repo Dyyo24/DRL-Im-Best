@@ -126,6 +126,7 @@ class DQN_Agent():
         self.burn_in = burn_in
         self.memory_size = memory_size
         # Create environment
+	self.environment_name = environment_name
         self.env = gym.make(environment_name)
         # Create Qnet
         self.Qnet = QNetwork(self.env.observation_space.shape[0], self.learning_rate)
@@ -158,6 +159,15 @@ class DQN_Agent():
             action = np.argmax(q_values)
         return action
         
+    def epsilon_greedy_policy_video(self, q_values,eps):
+
+		# Creating epsilon greedy probabilities to sample from.             
+
+        if np.random.uniform() < eps:           
+            action = self.env.action_space.sample()
+        else:
+            action = np.argmax(q_values)
+        return action	
 
     def greedy_policy(self, q_values):
 		# Creating greedy policy for test time. 
@@ -245,6 +255,9 @@ class DQN_Agent():
             TD_error_episode_average =np.mean(TD)
             TD_error_vec.append(TD_error_episode_average)
 
+            if episode % int(self.num_episodes/3) == 0:        # record video
+         	test_video(self, self.environment_name, episode)
+		
             # Test the Qnet every 100 episodes
             if episode_num % 100 ==0:
                 print('------------------------------')
@@ -301,13 +314,19 @@ class DQN_Agent():
 # Note: if you have problems creating video captures on servers without GUI,
 #       you could save and relaod model to create videos on your laptop. 
 def test_video(agent, env, epi):
+
 	# Usage: 
+
 	# 	you can pass the arguments within agent.train() as:
+
 	# 		if episode % int(self.num_episodes/3) == 0:
+
     #       	test_video(self, self.environment_name, episode)
+
     save_path = "./videos-%s-%s" % (env, epi)
     if not os.path.exists(save_path):
         os.mkdir(save_path)
+
     # To create video
     env = gym.wrappers.Monitor(agent.env, save_path, force=True)
     reward_total = []
@@ -315,11 +334,26 @@ def test_video(agent, env, epi):
     done = False
     while not done:
         env.render()
-        action = agent.epsilon_greedy_policy(state, 0.05)
+        all_action_vec = np.arange(agent.env.action_space.n).reshape(-1,1)
+                # Construct input state (action_num, state_dim)array
+        state_vec = np.tile(state, (agent.env.action_space.n,1))
+                # Observe predicted Q-value (action_num, 1)array
+        all_q_value_vec = agent.Qnet.predict(state_vec,all_action_vec)
+                # Select epsilon optimal action
+
+        action = agent.epsilon_greedy_policy_video(all_q_value_vec,0.05)
+
+
+#        action = agent.epsilon_greedy_policy(state, 0.05)
+
         next_state, reward, done, info = env.step(action)
+
         state = next_state
+
         reward_total.append(reward)
+
     print("reward_total: {}".format(np.sum(reward_total)))
+
     agent.env.close()
 
 
